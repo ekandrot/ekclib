@@ -1,6 +1,8 @@
 //
 //  scheduler.h
-//  rayexp
+//  Base class for certain types of threading code.
+//  Loosely based on CUDA
+//  http://developer.download.nvidia.com/compute/cuda/docs/CUDA_Architecture_Overview.pdf
 //
 //  Created by ekandrot on 11/14/16.
 //
