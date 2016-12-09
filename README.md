@@ -11,6 +11,8 @@ Your do_work will be called with an integer, which tells it which block of work 
 scheduler class handles creating threads, etc.  Your code just has to map that int to what needs to be done (ex rows in
 an image, files to be processes, etc).
 
+Usage:  to leverage multiple CPU cores as easy as possible.  Use with non-uniform workloads, so that the work is balanced across multiple cores at runtime, rather than at compile time.
+
 Example:
 ```
 #include "scheduler.h"
