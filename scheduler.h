@@ -12,40 +12,42 @@
 #define scheduler_h
 
 #include <thread>
+#include <mutex>
+#include <vector>
 
 struct worker {
     virtual void do_work(int work) =0;
 };
 
 class scheduler {
-    int maxWork;
-    int nextWork;
-    worker *w;
-    std::mutex workMutex;
-    std::vector<std::thread> threads;
-    int threadCount;
+    int _maxWork;
+    int _nextWork;
+    worker *_w;
+    std::mutex _workMutex;
+    std::vector<std::thread> _threads;
+    int _threadCount;
     
 public:
-    scheduler(worker *s, int mw) : maxWork(mw), nextWork(0), w(s) {
-        threadCount = std::thread::hardware_concurrency();
+    scheduler(worker *w, int maxWork) : _maxWork(maxWork), _nextWork(0), _w(w) {
+        _threadCount = std::thread::hardware_concurrency();
     }
     void run() {
-        nextWork = 0;   // reset so we can have multiple, sequential runs per object
-        for (int i=0; i<threadCount; ++i) {
-            threads.push_back(std::thread(&code_block, this, w));
+        _nextWork = 0;   // reset so we can have multiple, sequential runs per object
+        for (int i=0; i<_threadCount; ++i) {
+            _threads.push_back(std::thread(&code_block, this, _w));
         }
 
     }
 
     void join() {
-        for (auto& th : threads) th.join();
+        for (auto& th : _threads) th.join();
     }
     
     int get_work() {
-        std::lock_guard<std::mutex> lk(workMutex);
-        int retVal = nextWork;
-        if (retVal < maxWork) {
-            nextWork += 1;
+        std::lock_guard<std::mutex> lk(_workMutex);
+        int retVal = _nextWork;
+        if (retVal < _maxWork) {
+            _nextWork += 1;
         } else {
             retVal = -1;
         }
@@ -53,14 +55,14 @@ public:
 
     }
 
-    static void code_block(scheduler *t, worker *s) {
+    static void code_block(scheduler *t, worker *w) {
         while (true) {
             int work = t->get_work();
             
             if (work == -1) {
                 return;
             }
-            s->do_work(work);
+            w->do_work(work);
         }
 
     }
