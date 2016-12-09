@@ -41,7 +41,6 @@ performance test to show that the threading is working.  It has 80 work-units
 that take 50 ms each.  On an 8 core machine, it should take 0.5 seconds 
 walltime, and 4.0 seconds walltime on a single thread.  The results on my 
 machine are as follows:
-
 ```
 ---  Time using scheduler  ---
 Wall Time = 0.503025
@@ -49,5 +48,27 @@ CPU Time  = 0
 
 ---  Time using single CPU core  ---
 Wall Time = 4.02376
+CPU Time  = 0
+```
+
+### test_scheduler2
+This is a test for the scheduler and only does a wait as its workload.  It is different
+from the first test in that the workloads are non-uniform, the timings are stored in the 
+object in a vector - this represents workloads that take varying times.  This one then compares
+the timings of scheduler, single core, and 8 threads that assign 1/8th the range to each thread.
+The timings show that scheduler is faster, even with its internal locks and bookkeeping, on 
+non-uniform loads vs a fixed range of work assigned to a thread. The results on my 
+machine are as follows:
+```
+---  Time using scheduler  ---
+Wall Time = 0.537011
+CPU Time  = 0
+
+---  Time using single CPU core  ---
+Wall Time = 3.97234
+CPU Time  = 0
+
+---  Time using 8 threads  ---
+Wall Time = 0.571863
 CPU Time  = 0
 ```
