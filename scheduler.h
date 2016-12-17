@@ -76,25 +76,22 @@ private:
 #endif
 
 
-
     // this function has a lock around a work index counter.  As a thread
     // requests more work, update the index and return it to the code_block to
     // pass to the actual worker method.
     // returns -1 when there are no more indexes of work.
     // is called by multiple threads of code_block.
+    // _cv.wait - if the client is done adding work, or there is already work in the queue, then grab the lock and let this thread claim some of the workload
     int get_work() {
         std::unique_lock<std::mutex> lk(_workMutex);
         _cv.wait(lk, [this] {return _doneAddingWork || (_nextWork < _maxWork);});
-        int retVal = _nextWork;
-        if (retVal < _maxWork) {
-            ++_nextWork;
+        if (_nextWork < _maxWork) {
 #ifdef __DEBUG__
             ++_callCount;
 #endif
-        } else {
-            retVal = -1;
+            return _nextWork++;
         }
-        return retVal;
+        return -1;
     }
 
     // this the is function that is actually called by std::thread
@@ -103,18 +100,15 @@ private:
     // Repeat until this thread has no more work to do from the pool.
     // threadID is used for debugging.
     static void code_block(int threadID, scheduler *t, worker *w) {
-        while (true) {
-            int work = t->get_work();
-
-            if (work == -1) {
-#ifdef __DEBUG__
-                std::lock_guard<std::mutex> lk(t->_printMutex);
-                std::cout << "Thread " << threadID << " called:  " << _callCount << std::endl;
-#endif
-                return;
-            }
+        int work = t->get_work();
+        while (work != -1) {
             w->do_work(work);
+            work = t->get_work();
         }
+        #ifdef __DEBUG__
+        std::lock_guard<std::mutex> lk(t->_printMutex);
+        std::cout << "Thread " << threadID << " called:  " << _callCount << std::endl;
+        #endif
     }
 };
 
