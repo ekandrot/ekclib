@@ -61,7 +61,7 @@ struct nonUniformWork : worker {
 void scheduler_test() {
     // the code needed to drive the scheduler
     nonUniformWork work;
-    scheduler s(&work, WORKLOADS);
+    scheduler s(&work, WORKLOADS, 8);
     s.run();
     s.join();
 

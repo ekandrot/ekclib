@@ -121,7 +121,6 @@ struct nonUniformWork_wait : worker {
             // now let the scheduler know it has some work it can do
             s.add_work();
         }
-        s.done_adding_work();
     }
 
     // overriding worker's method
@@ -146,7 +145,7 @@ void scheduler_wait_test(int timeToGenerate) {
     // the code needed to drive the scheduler
     nonUniformWork_wait work;
     scheduler s(&work, 0);
-    s.run_wait();
+    s.run();
     work.generate_work(s, timeToGenerate);
     s.join();
 }
