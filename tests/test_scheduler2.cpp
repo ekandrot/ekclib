@@ -116,6 +116,7 @@ int main(int argc, char **argv) {
     wall1 = get_wall_time();
     cpu1 = get_cpu_time();
 
+    std::cout << "Simple scheduler test that performs 8 non-uniform waits as 'work'." << std::endl;
     std::cout << "---  Time using scheduler  ---" << std::endl;
     std::cout << "Wall Time = " << wall1 - wall0 << std::endl;
     std::cout << "CPU Time  = " << cpu1 - cpu0 << std::endl;
