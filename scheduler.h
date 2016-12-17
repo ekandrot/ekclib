@@ -8,12 +8,17 @@
 //
 //
 
+//#define __DEBUG__
+
 #ifndef scheduler_h
 #define scheduler_h
 
 #include <thread>
 #include <mutex>
 #include <vector>
+#ifdef __DEBUG__
+#include <iostream>
+#endif
 
 // inherent from this, override do_work() with your own method
 struct worker {
@@ -29,7 +34,11 @@ class scheduler {
     std::mutex _workMutex;  // a shared mutex to lock access to _nextWork between threads
     std::vector<std::thread> _threads;  // the list of threads that are running
     int _threadCount;   // number of threads run() should create
-    
+#ifdef __DEBUG__
+    std::mutex _printMutex;  // a shared mutex for std::cout usage
+    static thread_local int _callCount;     // per thread, number of times this thread was used
+#endif
+
 public:
     scheduler(worker *w, int maxWork) : _maxWork(maxWork), _nextWork(0), _w(w) {
         // we initialize with the number of threads hardware says we have
@@ -42,7 +51,7 @@ public:
         _threads.clear();   // clear away any old threads stored from possible previous invocations
         _nextWork = 0;   // reset so we can have multiple, sequential runs per object
         for (int i=0; i<_threadCount; ++i) {
-            _threads.push_back(std::thread(&code_block, this, _w));
+            _threads.push_back(std::thread(&code_block, i, this, _w));
         }
     }
 
@@ -61,7 +70,10 @@ public:
         std::lock_guard<std::mutex> lk(_workMutex);
         int retVal = _nextWork;
         if (retVal < _maxWork) {
-            _nextWork += 1;
+            ++_nextWork;
+            #ifdef __DEBUG__
+            ++_callCount;
+            #endif
         } else {
             retVal = -1;
         }
@@ -72,16 +84,25 @@ public:
     // it gets the next index of work, if it is -1 then this thread is done.
     // Otherwise, it invokes the do_work method with that work index.
     // Repeat until this thread has no more work to do from the pool.
-    static void code_block(scheduler *t, worker *w) {
+    // threadID is used for debugging.
+    static void code_block(int threadID, scheduler *t, worker *w) {
         while (true) {
             int work = t->get_work();
             
             if (work == -1) {
+                #ifdef __DEBUG__
+                std::lock_guard<std::mutex> lk(t->_printMutex);
+                std::cout << "Thread " << threadID << " called:  " << _callCount << std::endl;
+                #endif
                 return;
             }
             w->do_work(work);
         }
     }
 };
+
+#ifdef __DEBUG__
+thread_local int scheduler::_callCount = 0;
+#endif
 
 #endif /* scheduler_h */
