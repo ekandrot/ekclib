@@ -69,7 +69,7 @@ With the 10 ms overhead, this is masking the much of the threads work, because
 that, implying that the masking is working.
 In the case of 100 ms overhead, it is much longer than any of the workloads, so it will be the same
 speed as if it were single threaded 40 x 100 ms = 4.0 seconds.
-With the _DEBUG numbers turned on, we can see the distribution of WORKLOAD per thread.  Since the
+With the __DEBUG__ numbers turned on, we can see the distribution of WORKLOAD per thread.  Since the
 workloads are non-uniform, when there is little overhead, the thread calls are uneven.  But as we
 increase the overhead, the thread calls become more uniform.
 */

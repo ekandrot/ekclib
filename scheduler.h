@@ -21,7 +21,7 @@
 #include <iostream>
 #endif
 
-// inherent from this, override do_work() with your own method
+// inherit from this, override do_work() with your own method
 struct worker {
     virtual void do_work(int work) =0;
 };
