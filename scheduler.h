@@ -8,7 +8,7 @@
 //
 //
 
-//#define __DEBUG__
+#define __DEBUG__
 
 #ifndef scheduler_h
 #define scheduler_h
@@ -16,6 +16,7 @@
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <condition_variable>
 #ifdef __DEBUG__
 #include <iostream>
 #endif
@@ -26,7 +27,42 @@ struct worker {
 };
 
 
-class scheduler {
+struct scheduler {
+
+    scheduler(worker *w, int maxWork, int threadCount=0) : _maxWork(maxWork), _nextWork(0), _w(w) {
+        // we initialize with the number of threads hardware says we have
+        if (threadCount < 1) {
+            _threadCount = std::thread::hardware_concurrency();
+        }
+        _done = false;  // used by wait
+    }
+
+    void run_wait() {
+        run_all_threads(&code_block_wait);
+    }
+
+    void add_work() {
+        ++_maxWork;
+        _cv.notify_one();
+    }
+
+    void done_adding_work() {
+        _done = true;
+        _cv.notify_all();
+    }
+
+    void run() {
+        run_all_threads(&code_block);
+    }
+
+    // wait for all of the threads to claim they have no more work.
+    void join() {
+        for (auto& th : _threads) th.join();
+        _threads.clear();   // clear away the threads now that we are done with them
+    }
+
+private:
+
     // internal private variables
     int _maxWork;   // the last of the range of work indexes
     int _nextWork;  // the next free index of work, shared access by all threads
@@ -39,28 +75,16 @@ class scheduler {
     static thread_local int _callCount;     // per thread, number of times this thread was used
 #endif
 
-public:
-    scheduler(worker *w, int maxWork) : _maxWork(maxWork), _nextWork(0), _w(w) {
-        // we initialize with the number of threads hardware says we have
-        // could create an accessor in case someone needs to override that number
-        _threadCount = std::thread::hardware_concurrency();
-    }
 
     // resets the starting work load index.  Then creates a number of threads to do work.
-    void run() {
+    void run_all_threads(auto x) {
         _threads.clear();   // clear away any old threads stored from possible previous invocations
         _nextWork = 0;   // reset so we can have multiple, sequential runs per object
-        for (int i=0; i<_threadCount; ++i) {
-            _threads.push_back(std::thread(&code_block, i, this, _w));
+        for (int i = 0; i<_threadCount; ++i) {
+            _threads.push_back(std::thread(x, i, this, _w));
         }
     }
 
-    // wait for all of the threads to claim they have no more work.
-    void join() {
-        for (auto& th : _threads) th.join();
-        _threads.clear();   // clear away the threads now that we are done with them
-    }
-    
     // this function has a lock around a work index counter.  As a thread
     // requests more work, update the index and return it to the code_block to
     // pass to the actual worker method.
@@ -88,12 +112,47 @@ public:
     static void code_block(int threadID, scheduler *t, worker *w) {
         while (true) {
             int work = t->get_work();
-            
+
             if (work == -1) {
-                #ifdef __DEBUG__
+#ifdef __DEBUG__
                 std::lock_guard<std::mutex> lk(t->_printMutex);
                 std::cout << "Thread " << threadID << " called:  " << _callCount << std::endl;
-                #endif
+#endif
+                return;
+            }
+            w->do_work(work);
+        }
+    }
+
+
+    std::condition_variable _cv;
+    bool _done;
+
+    int get_work_wait() {
+        std::unique_lock<std::mutex> lk(_workMutex);
+        _cv.wait(lk, [this] {return _done || (_nextWork < _maxWork);});
+        int retVal = _nextWork;
+        if (retVal < _maxWork) {
+            ++_nextWork;
+#ifdef __DEBUG__
+            ++_callCount;
+#endif
+        } else {
+            retVal = -1;
+        }
+        return retVal;
+    }
+
+
+    static void code_block_wait(int threadID, scheduler *t, worker *w) {
+        while (true) {
+            int work = t->get_work_wait();
+
+            if (work == -1) {
+#ifdef __DEBUG__
+                std::lock_guard<std::mutex> lk(t->_printMutex);
+                std::cout << "Thread " << threadID << " called:  " << _callCount << std::endl;
+#endif
                 return;
             }
             w->do_work(work);

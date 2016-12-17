@@ -1,8 +1,12 @@
 //
-//  test_scheduler2.cpp
+//  test_scheduler3.cpp
 //  Test for scheduling class.  To show off the non-uniform workloads via sleep.
+//  This test simlulates a main thread that is doing some work to generate the payloads.
+//  This would be like a JPEG decoder doing a HUffman decode in the main thread, and when
+//  each block of the image is decoded, then let the non-uniform thread scheduler handle
+//  the DCT and color conversion for each block (with a block == a workload).
 //
-//  Created by ekandrot on 12/09/16.
+//  Created by ekandrot on 12/16/16.
 //
 
 /*
@@ -31,7 +35,7 @@ CPU Time  = 0
 
 /*
 build this example code from the command line with:
-g++ test_scheduler2.cpp -std=c++14
+g++ test_scheduler3.cpp -std=c++14
 
 currently, tested on Windows and Mac.
 */
@@ -42,27 +46,39 @@ currently, tested on Windows and Mac.
 // the class that has a lot of work to do
 struct nonUniformWork : worker {
     std::vector<int> _sleepTimes;
+    static thread_local int _locals;
     nonUniformWork() {
-        // create some non-uniform timings to simulate varying workloads
-        srand(0);   // assign the seed, so that call code gets the same timings
-        for (int i = 0; i < WORKLOADS; ++i) {
-            _sleepTimes.push_back(rand() % 100);
-        }
     }
 
+    void generate_work(scheduler &s) {
+        srand(0);   // assign the seed, so that call code gets the same timings
+        for (int i = 0; i < WORKLOADS; ++i) {
+            // simulate the time it takes to generate this work for a thread
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // create some non-uniform timings to simulate varying workloads
+            _sleepTimes.push_back(rand() % 100);
+            // now let the scheduler know it has some work it can do
+            s.add_work();
+        }
+        s.done_adding_work();
+    }
+
+    // overriding worker's method
     void do_work(int work) {
         // do work, based on the index variable work
         std::this_thread::sleep_for(std::chrono::milliseconds(_sleepTimes[work]));
     }
 };
+thread_local int nonUniformWork::_locals = 0;
 
 //-------------------------------------------------------------------------
 
 void scheduler_test() {
     // the code needed to drive the scheduler
     nonUniformWork work;
-    scheduler s(&work, WORKLOADS);
-    s.run();
+    scheduler s(&work, 0);
+    s.run_wait();
+    work.generate_work(s);
     s.join();
 
 }
@@ -120,7 +136,7 @@ int main(int argc, char **argv) {
     std::cout << "Wall Time = " << wall1 - wall0 << std::endl;
     std::cout << "CPU Time  = " << cpu1 - cpu0 << std::endl;
     std::cout << std::endl;
-
+#if 0
     //--- single CPU timing code ---
 
     wall0 = get_wall_time();
@@ -153,7 +169,7 @@ int main(int argc, char **argv) {
     std::cout << "---  Time using 8 threads  ---" << std::endl;
     std::cout << "Wall Time = " << wall1 - wall0 << std::endl;
     std::cout << "CPU Time  = " << cpu1 - cpu0 << std::endl;
-
+#endif
     return 0;
 }
 

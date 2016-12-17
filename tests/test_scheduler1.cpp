@@ -1,5 +1,5 @@
 //
-//  test_scheduler1.h
+//  test_scheduler1.cpp
 //  Test for scheduling class.  Very basic - just a sleep as the workload.
 //
 //  Created by ekandrot on 12/09/16.
@@ -25,7 +25,7 @@ CPU Time  = 0
 
 /*
 build this example code from the command line with:
-g++ test_scheduler1.cpp -std=c++11
+g++ test_scheduler1.cpp -std=c++14
 
 currently, tested on Windows and Mac.
 */
