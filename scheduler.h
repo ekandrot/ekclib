@@ -77,7 +77,7 @@ private:
 
 
     // resets the starting work load index.  Then creates a number of threads to do work.
-    void run_all_threads(auto x) {
+    void run_all_threads( void (*x)(int threadID, scheduler *t, worker *w) ) {
         _threads.clear();   // clear away any old threads stored from possible previous invocations
         _nextWork = 0;   // reset so we can have multiple, sequential runs per object
         for (int i = 0; i<_threadCount; ++i) {
