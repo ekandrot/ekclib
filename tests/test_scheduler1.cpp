@@ -76,6 +76,7 @@ int main(int argc, char **argv) {
     wall1 = get_wall_time();
     cpu1 = get_cpu_time();
 
+    std::cout << "Simple scheduler test that performs uniform waits as 'work'." << std::endl;
     std::cout << "---  Time using scheduler  ---" << std::endl;
     std::cout << "Wall Time = " << wall1 - wall0 << std::endl;
     std::cout << "CPU Time  = " << cpu1 - cpu0 << std::endl;
@@ -91,7 +92,6 @@ int main(int argc, char **argv) {
     //  Stop timers
     wall1 = get_wall_time();
     cpu1 = get_cpu_time();
-
 
     std::cout << "---  Time using single CPU core  ---" << std::endl;
     std::cout << "Wall Time = " << wall1 - wall0 << std::endl;
