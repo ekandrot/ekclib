@@ -38,7 +38,10 @@ struct scheduler {
     }
 
     void add_work() {
-        ++_maxWork;
+        {
+            std::lock_guard<std::mutex> lk(_workMutex);
+            ++_maxWork;
+        }
         _cv.notify_one();
     }
 
@@ -53,7 +56,10 @@ struct scheduler {
 
     // wait for all of the threads to claim they have no more work.
     void join() {
-        _doneAddingWork = true;
+        {
+            std::lock_guard<std::mutex> lk(_workMutex);
+            _doneAddingWork = true;
+        }
         _cv.notify_all();
         for (auto& th : _threads) th.join();
         _threads.clear();   // clear away the threads now that we are done with them
