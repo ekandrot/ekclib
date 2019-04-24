@@ -37,10 +37,10 @@ struct scheduler {
         _doneAddingWork = false;  // used by wait
     }
 
-    void add_work() {
+    void add_work(int new_work=1) {
         {
             std::lock_guard<std::mutex> lk(_workMutex);
-            ++_maxWork;
+            _maxWork += new_work;
         }
         _cv.notify_one();
     }
@@ -64,6 +64,9 @@ struct scheduler {
         for (auto& th : _threads) th.join();
         _threads.clear();   // clear away the threads now that we are done with them
     }
+
+    // total number of threads, either passed in or by hardware query, set in initializer
+    int number_of_threads_used() const {return _threadCount;}
 
 private:
 
